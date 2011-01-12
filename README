@@ -1,0 +1,19 @@
+C and Python 1-wire interface
+
+Note that the C library competes with the Linux wire.ko kernel 
+module. This library will not function if wire.ko is inserted.
+
+On Ubuntu requires at least the following packages to build:
+- libusb-dev
+- python-dev
+
+Copyright (C) Bjorn Andersson <bjorn@iki.fi>
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License version 2.1 as published by the Free Software Foundation.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
