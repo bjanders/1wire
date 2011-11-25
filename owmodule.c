@@ -155,7 +155,7 @@ ow_cmd(OwUsbObject *self, PyObject *args)
 		PyErr_SetString(PyExc_ValueError, "Output cannot be longer than 64 bytes");
 		return NULL;
 	}
-	result = owusb_cmd(self->dev, addr, cmd, outbuf, outlen);
+	result = owusb_cmd(self->dev, (const uint8_t *)addr, cmd, outbuf, outlen);
 	return Py_BuildValue("s#", outbuf, result);
 }
 
@@ -329,7 +329,7 @@ static PyTypeObject OwDevIterType = {
     0,                         /*tp_as_sequence*/
     0,                         /*tp_as_mapping*/
     0,                         /*tp_hash */
-    ow_iter,                   /*tp_call*/
+    (ternaryfunc)ow_iter,      /*tp_call*/
     0,                         /*tp_str*/
     0,                         /*tp_getattro*/
     0,                         /*tp_setattro*/
