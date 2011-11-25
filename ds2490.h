@@ -42,7 +42,7 @@ enum {
 	PARAM_NTF =	0x0400, /* Result feedback */
 	PARAM_ICP =	0x0200, /* Not last one of macro */
 	PARAM_RST =	0x0100, /* Reset before executing command */
-	PARAM_IM = 	0x0001 /* Immediate execution */
+	PARAM_IM = 	0x0001  /* Immediate execution */
 };
 
 #define INTERRUPT_DATA_LEN 32
@@ -103,6 +103,16 @@ enum {
 	STATE_DATA_IN_BUFFER_STATUS = 0x0d
 };
 	
+
+enum {
+	WIRE_CMD_READ_ROM = 0x33,
+	WIRE_CMD_OD_SKIP_ROM = 0x3c,
+	WIRE_CMD_MATCH_ROM = 0x55,
+	WIRE_CMD_OD_MATCH_ROM = 0x69,
+	WIRE_CMD_SKIP_ROM = 0xcc,
+	WIRE_CMD_COND_SEARCH_ROM = 0xec,
+	WIRE_CMD_SEARCH_ROM = 0xf0
+};
 
 typedef struct owusb_device {
 	struct usb_device *device;
@@ -172,7 +182,7 @@ int  owusb_isidle(owusb_device_t *dev);
 uint16_t owusb_result(owusb_device_t *dev);
 void owusb_print_state(owusb_device_t *dev);
 void owusb_print_result(owusb_device_t *dev);
-int  owusb_cmd(owusb_device_t *dev, uint8_t* addr, uint8_t cmd, uint8_t *out, int outlen);
+int  owusb_cmd(owusb_device_t *dev, const uint8_t* addr, uint8_t cmd, uint8_t *out, int outlen);
 int  owusb_write_byte(owusb_device_t *dev, uint8_t byte);
 int  owusb_read_bit(owusb_device_t *dev);
 uint16_t owusb_reset(owusb_device_t *dev);

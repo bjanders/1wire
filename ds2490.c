@@ -21,14 +21,18 @@
 #define MODE_CMD    0x02
 
 
-#define REGULAR_RESET_US  1096
-#define REGULAR_SLOT_US   86
+#define REGULAR_RESET_US 1096 /* 512us low + 584us high */
+#define REGULAR_SLOT_US 86
+#define OVERDRIVE_RESET_US 138 /* 64us low + 74us high */
 #define OVERDRIVE_SLOT_US 10
-#define FLEXIBLE_SLOT_US  70
+#define FLEXIBLE_RESET_US 1096 /* 512us low + 584us high */
+#define FLEXIBLE_SLOT_US 70
 
 #define REGULAR_BPS    1000000 / 68
 #define OVERDRIVE_BPS  1000000 / 10
 #define FLEXIBLE_BPS   1000000 / 79
+
+#define USB_DEVICE_TO_HOST 0x40
 
 /*
  * Three different vendor-specific command types exist to control and
@@ -135,7 +139,7 @@ const char *ow_slew_rate[] = {
 int
 owusb_ctl_reset(owusb_device_t *d)
 {
-	return usb_control_msg(d->handle, 0x40, CONTROL_CMD, CTL_RESET_DEVICE, 0x0000, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, CONTROL_CMD, CTL_RESET_DEVICE, 0x0000, NULL, 0, USB_TIMEOUT);
 }
 
 
@@ -149,7 +153,7 @@ owusb_ctl_reset(owusb_device_t *d)
 int
 owusb_ctl_start_exe(owusb_device_t *d)
 {
-	return usb_control_msg(d->handle, 0x40, CONTROL_CMD, CTL_START_EXE, 0x0000, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, CONTROL_CMD, CTL_START_EXE, 0x0000, NULL, 0, USB_TIMEOUT);
 }
 
 
@@ -163,7 +167,7 @@ owusb_ctl_start_exe(owusb_device_t *d)
 int
 owusb_ctl_resume_exe(owusb_device_t *d)
 {
-	return usb_control_msg(d->handle, 0x40, CONTROL_CMD, CTL_RESUME_EXE, 0x0000, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, CONTROL_CMD, CTL_RESUME_EXE, 0x0000, NULL, 0, USB_TIMEOUT);
 }
 
 
@@ -180,7 +184,7 @@ owusb_ctl_resume_exe(owusb_device_t *d)
 int
 owusb_ctl_halt_exe_idle(owusb_device_t *d)
 {
-	return usb_control_msg(d->handle, 0x40, CONTROL_CMD, CTL_HALT_EXE_IDLE, 0x0000, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, CONTROL_CMD, CTL_HALT_EXE_IDLE, 0x0000, NULL, 0, USB_TIMEOUT);
 }
 
 
@@ -197,7 +201,7 @@ owusb_ctl_halt_exe_idle(owusb_device_t *d)
 int
 owusb_ctl_halt_exe_done(owusb_device_t *d)
 {
-	return usb_control_msg(d->handle, 0x40, CONTROL_CMD, CTL_HALT_EXE_DONE, 0x0000, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, CONTROL_CMD, CTL_HALT_EXE_DONE, 0x0000, NULL, 0, USB_TIMEOUT);
 }
 
 
@@ -212,7 +216,7 @@ owusb_ctl_halt_exe_done(owusb_device_t *d)
 int
 owusb_ctl_flush_comm_cmds(owusb_device_t *d)
 {
-	return usb_control_msg(d->handle, 0x40, CONTROL_CMD, CTL_FLUSH_COMM_CMDS, 0x0000, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, CONTROL_CMD, CTL_FLUSH_COMM_CMDS, 0x0000, NULL, 0, USB_TIMEOUT);
 }
 
 
@@ -225,7 +229,7 @@ owusb_ctl_flush_comm_cmds(owusb_device_t *d)
 int
 owusb_ctl_flush_rcv_buffer(owusb_device_t *d)
 {
-	return usb_control_msg(d->handle, 0x40, CONTROL_CMD, CTL_FLUSH_RCV_BUFFER, 0x0000, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, CONTROL_CMD, CTL_FLUSH_RCV_BUFFER, 0x0000, NULL, 0, USB_TIMEOUT);
 }
 
 
@@ -238,7 +242,7 @@ owusb_ctl_flush_rcv_buffer(owusb_device_t *d)
 int
 owusb_ctl_flush_xmt_buffer(owusb_device_t *d)
 {
-	return usb_control_msg(d->handle, 0x40, CONTROL_CMD, CTL_FLUSH_XMT_BUFFER, 0x0000, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, CONTROL_CMD, CTL_FLUSH_XMT_BUFFER, 0x0000, NULL, 0, USB_TIMEOUT);
 }
 
 /* owusb_ctl_get_comm_cmds
@@ -262,7 +266,7 @@ owusb_ctl_flush_xmt_buffer(owusb_device_t *d)
 int
 owusb_ctl_get_comm_cmds(owusb_device_t *d, uint8_t *cmds, int len)
 {
-	return usb_control_msg(d->handle, 0x40, CONTROL_CMD, CTL_RESUME_EXE, 0x0000, (char *)cmds, len, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, CONTROL_CMD, CTL_RESUME_EXE, 0x0000, (char *)cmds, len, USB_TIMEOUT);
 }
 
 /**************************************************************
@@ -290,7 +294,7 @@ owusb_ctl_get_comm_cmds(owusb_device_t *d, uint8_t *cmds, int len)
 int
 owusb_mod_pulse_en(owusb_device_t *d, int params)
 {
-	return usb_control_msg(d->handle, 0x40, MODE_CMD, MOD_PULSE_EN, params & 0x3, NULL, 0, USB_TIMEOUT);	
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, MODE_CMD, MOD_PULSE_EN, params & 0x3, NULL, 0, USB_TIMEOUT);	
 }
 
 
@@ -308,7 +312,7 @@ owusb_mod_pulse_en(owusb_device_t *d, int params)
 int
 owusb_mod_speed_change_en(owusb_device_t *d, int enable)
 {
-	return usb_control_msg(d->handle, 0x40, MODE_CMD, MOD_SPEED_CHANGE_EN, enable & 0x1, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, MODE_CMD, MOD_SPEED_CHANGE_EN, enable & 0x1, NULL, 0, USB_TIMEOUT);
 }
 
 /* owusb_mod_speed
@@ -323,7 +327,7 @@ owusb_mod_speed_change_en(owusb_device_t *d, int enable)
 int
 owusb_mod_speed(owusb_device_t *d, int speed)
 {
-	return usb_control_msg(d->handle, 0x40, MODE_CMD, MOD_1WIRE_SPEED, speed & 0x3, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, MODE_CMD, MOD_1WIRE_SPEED, speed & 0x3, NULL, 0, USB_TIMEOUT);
 }
 
 /* owusb_mod_strong_pu_duration
@@ -345,7 +349,7 @@ owusb_mod_speed(owusb_device_t *d, int speed)
 int
 owusb_mod_strong_pu_duration(owusb_device_t *d, int duration)
 {
-	return usb_control_msg(d->handle, 0x40, MODE_CMD, MOD_STRONG_PU_DURATION, duration & 0xff, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, MODE_CMD, MOD_STRONG_PU_DURATION, duration & 0xff, NULL, 0, USB_TIMEOUT);
 }
 
 /*
@@ -363,7 +367,7 @@ owusb_mod_strong_pu_duration(owusb_device_t *d, int duration)
 int
 owusb_mod_pulldown_slewrate(owusb_device_t *d, int slewrate)
 {
-	return usb_control_msg(d->handle, 0x40, MODE_CMD, MOD_PULLDOWN_SLEWRATE, slewrate & 0xf, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, MODE_CMD, MOD_PULLDOWN_SLEWRATE, slewrate & 0xf, NULL, 0, USB_TIMEOUT);
 }
 
 /*
@@ -380,7 +384,7 @@ owusb_mod_pulldown_slewrate(owusb_device_t *d, int slewrate)
 int
 owusb_mod_prog_pulse_duration(owusb_device_t *d, int duration)
 {
-	return usb_control_msg(d->handle, 0x40, MODE_CMD, MOD_PROG_PULSE_DURATION, duration & 0xff, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, MODE_CMD, MOD_PROG_PULSE_DURATION, duration & 0xff, NULL, 0, USB_TIMEOUT);
 }
 
 /*
@@ -392,7 +396,7 @@ owusb_mod_prog_pulse_duration(owusb_device_t *d, int duration)
 int
 owusb_mod_write1_lowtime(owusb_device_t *d, int duration)
 {
-	return usb_control_msg(d->handle, 0x40, MODE_CMD, MOD_WRITE1_LOWTIME, duration & 0xf, NULL, 0, USB_TIMEOUT);	
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, MODE_CMD, MOD_WRITE1_LOWTIME, duration & 0xf, NULL, 0, USB_TIMEOUT);	
 }
 
 /*
@@ -402,7 +406,7 @@ owusb_mod_write1_lowtime(owusb_device_t *d, int duration)
 int
 owusb_mod_dsow0_trec(owusb_device_t *d, int duration)
 {
-	return usb_control_msg(d->handle, 0x40, MODE_CMD, MOD_DSOW0_TREC, duration & 0xf, NULL, 0, USB_TIMEOUT);	
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, MODE_CMD, MOD_DSOW0_TREC, duration & 0xf, NULL, 0, USB_TIMEOUT);	
 }
 
 
@@ -417,7 +421,7 @@ owusb_mod_dsow0_trec(owusb_device_t *d, int duration)
  * programming pulse or strong pullup.
  *
  * @param params NTF, ICP, IM (TYPE)
- * @param type 1: programming pulse; 0: strong pullup
+ * @param type 0: strong pullup; 1: programming pulse
  */
 
 int
@@ -426,7 +430,7 @@ owusb_com_set_duration(owusb_device_t *d, int params, int type, int duration)
 	
 	if (type) params |= PARAM_TYPE;
 	params |= COM_SET_DURATION;
-	return usb_control_msg(d->handle, 0x40, COMM_CMD, params, duration & 0xff, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, COMM_CMD, params, duration & 0xff, NULL, 0, USB_TIMEOUT);
 }
 
 /*
@@ -436,7 +440,7 @@ owusb_com_set_duration(owusb_device_t *d, int params, int type, int duration)
  * temperature sensor or crypto iButton.
  *
  * @param params F, NTF, ICP, TYPE, IM (TYPE)
- * @param type 1: programming pulse; 0: strong pullup
+ * @param type 0: strong pullup; 1: programming pulse
  */
 
 int
@@ -444,7 +448,7 @@ owusb_com_pulse(owusb_device_t *d, int params, int type)
 {
 	if (type) params |= PARAM_TYPE;
 	params |= COM_PULSE;
-	return usb_control_msg(d->handle, 0x40, COMM_CMD, params, 0, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, COMM_CMD, params, 0, NULL, 0, USB_TIMEOUT);
 }
 
 /*
@@ -463,49 +467,92 @@ owusb_com_reset(owusb_device_t *d, int params, int present, int speed)
 {
 	if (present) params |= PARAM_PST;
 	params |= COM_RESET;
-	return usb_control_msg(d->handle, 0x40, COMM_CMD, params, speed & 0x3, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, COMM_CMD, params, speed & 0x3, NULL, 0, USB_TIMEOUT);
 }
 
-/* 
- * SPU, NTF, ICP, IM (CIB, D)
+/*
+ * Generate a single time slot on the 1-Wire bus.
+ *
+ * This time slot may optionally be followed by a strong pullup using
+ * embedded command bits SPU and CIB. With CIB = 1, a requested strong
+ * pullup will only occur if the read-back revealed a 0. Data is
+ * returned to the host only if the embedded command bit ICP = 0. If
+ * ICP = 0, the bit read from the 1-Wire device is stored in the EP3
+ * FIFO and is read by the host using an EP3 bulk transaction.
+ *
+ * @param params SPU, NTF, ICP, IM (CIB, D)
+ * @param bit Bit to write (0 or 1)
  */
 
 int
 owusb_com_bit_io(owusb_device_t *d, int params, int bit)
 {
 	if (bit) params |= PARAM_D;
-	return usb_control_msg(d->handle, 0x40, COMM_CMD, COM_BIT_IO | params, 0, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, COMM_CMD, COM_BIT_IO | params, 0, NULL, 0, USB_TIMEOUT);
 }
 
 /*
- * SPU, NTF, ICP, IM
+ * Accomplish a direct 1-Wire write and read with optional strong
+ * pullup after the last bit of the byte.
+ *
+ * The optional strong pullup is controlled using embedded command bit
+ * SPU. For a read sequence, the setup packet data byte value is set
+ * to 0xFF. Data is returned to the host only if the embedded command
+ * bit ICP = 0. If ICP = 0, the byte read from the 1-Wire device is
+ * stored in the EP3 FIFO and is read by the host using an EP3 bulk
+ * transaction.
+* 
+ * @param params SPU, NTF, ICP, IM
+ * @param byte Byte to write
  */
 int
 owusb_com_byte_io(owusb_device_t *d, int params, uint8_t byte)
 {
-	return usb_control_msg(d->handle, 0x40, COMM_CMD, COM_BYTE_IO | params, byte & 0xff, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, COMM_CMD, COM_BYTE_IO | params, byte & 0xff, NULL, 0, USB_TIMEOUT);
 }
 
 /* 
- * SPU, NTF, ICP, RST, IM
+ * Accomplish a direct 1-Wire write or read with optional strong
+ * pullup after the last byte of the block.
+ *
+ * The optional strong pullup is controlled using embedded command bit
+ * SPU. Embedded command bit RST enables a 1-Wire reset before the
+ * command executes. To accomplish a READ function all input data
+ * should be 0xFF, otherwise the data read from the 1-Wire bus will be
+ * masked. For a block write sequence the EP2 FIFO must be pre-filled
+ * with data before command execution. Additionally, for block sizes
+ * greater then the FIFO size, the FIFO content status must be
+ * monitored by host SW so that additional data can be sent to the
+ * FIFO when necessary. A similar EP3 FIFO content monitoring
+ * requirement exists for block read sequences. During a block read
+ * the number of bytes loaded into the EP3 FIFO must be monitored so
+ * that the data can be read before the FIFO overflows.
+ * 
+ * @param params SPU, NTF, ICP, RST, IM
+ * @param len
  */
 int
 owusb_com_block_io(owusb_device_t *d, int params, int len)
 {
-	return usb_control_msg(d->handle, 0x40, COMM_CMD, COM_BLOCK_IO | params, len, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, COMM_CMD, COM_BLOCK_IO | params, len, NULL, 0, USB_TIMEOUT);
 }
 
 /*
- * params: NTF, ICP, RST, SE, IM
- * speed: 0-2
- * cmd: 0x55 (match rom), 0x69 (overdrive match rom)
+ * Address a device on the active section of the 1-Wire bus using the
+ * Match ROM or Overdrive Match command code.
+ * 
+ * @param params NTF, ICP, RST, SE, IM
+ * @param speed PARAM_SPEED_REGULAR, PARAM_SPEED_FLEXIBLE,
+ * PARAM_SPEED_OVERDRIVE
+ * @param cmd WIRE_CMD_MATCH_ROM, WIRE_CMD_OD_MATCH_ROM
+
  * 
  */
 int
 owusb_com_match_access(owusb_device_t *d, int params, int speed, uint8_t cmd)
 {
 	int index = speed << 8 & cmd;
-	return usb_control_msg(d->handle, 0x40, COMM_CMD, COM_MATCH_ACCESS | params, index, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, COMM_CMD, COM_MATCH_ACCESS | params, index, NULL, 0, USB_TIMEOUT);
 }
 
 /*
@@ -524,7 +571,7 @@ owusb_com_read_straight(owusb_device_t *d, int params, int writelen, int readlen
 
 	p |= writelen << 8;
 
-	return usb_control_msg(d->handle, 0x40, COMM_CMD, COM_READ_STRAIGHT | p, readlen, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, COMM_CMD, COM_READ_STRAIGHT | p, readlen, NULL, 0, USB_TIMEOUT);
 }
 
 /*
@@ -535,7 +582,7 @@ owusb_com_do_and_release(owusb_device_t *d, int params, int len)
 {
 	int cmd = 0x6000 | COM_DO_AND_RELEASE | params;
 
-	return usb_control_msg(d->handle, 0x40, COMM_CMD, cmd, len & 0xff, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, COMM_CMD, cmd, len & 0xff, NULL, 0, USB_TIMEOUT);
 }
 
 /*
@@ -544,7 +591,7 @@ owusb_com_do_and_release(owusb_device_t *d, int params, int len)
 int
 owusb_com_set_path(owusb_device_t *d, int params, int len)
 {
-	return usb_control_msg(d->handle, 0x40, COMM_CMD, COM_SET_PATH | params, len & 0xff, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, COMM_CMD, COM_SET_PATH | params, len & 0xff, NULL, 0, USB_TIMEOUT);
 }
 
 /* 
@@ -553,7 +600,7 @@ owusb_com_set_path(owusb_device_t *d, int params, int len)
 int
 owusb_com_write_sram_page(owusb_device_t *d, int params, int len)
 {
-	return usb_control_msg(d->handle, 0x40, COMM_CMD, COM_WRITE_SRAM_PAGE | params, len & 0xff, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, COMM_CMD, COM_WRITE_SRAM_PAGE | params, len & 0xff, NULL, 0, USB_TIMEOUT);
 }
 
 /*
@@ -562,7 +609,7 @@ owusb_com_write_sram_page(owusb_device_t *d, int params, int len)
 int
 owusb_com_write_eprom(owusb_device_t *d, int params, int len)
 {
-	return usb_control_msg(d->handle, 0x40, COMM_CMD, COM_WRITE_EPROM | params, len, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, COMM_CMD, COM_WRITE_EPROM | params, len, NULL, 0, USB_TIMEOUT);
 }
 
 /* 
@@ -572,7 +619,7 @@ int
 owusb_com_read_crc_prot_page(owusb_device_t *d, int params, int page_count, int page_size)
 {
 	int index = page_count << 8 | page_size;
-	return usb_control_msg(d->handle, 0x40, COMM_CMD, COM_READ_CRC_PROT_PAGE | params, index, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, COMM_CMD, COM_READ_CRC_PROT_PAGE | params, index, NULL, 0, USB_TIMEOUT);
 }
 
 /*
@@ -584,12 +631,12 @@ owusb_com_read_redirect_page(owusb_device_t *d, int params, int page_number, int
 	int value = COM_READ_REDIRECT_PAGE | 0x2100 | params;
 	int index = page_number << 8 | page_size;
 
-	return usb_control_msg(d->handle, 0x40, COMM_CMD, value, index, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, COMM_CMD, value, index, NULL, 0, USB_TIMEOUT);
 }
 
 /*
  * params:  F, NTF, ICP, RST, IM (RTS, SM)
- * cmd: 0xf0 (search ROM), 0xec (conditional search ROM)
+ * cmd: WIRE_CMD_SEARCH_ROM, WIRE_CMD_COND_SEARCH_ROM
  */
 
 int
@@ -600,14 +647,14 @@ owusb_com_search_access(owusb_device_t *d, int params, int discrepancy, int noac
 	if (discrepancy) params |= PARAM_RTS;
 	if (noaccess) params |= PARAM_SM;
 
-	return usb_control_msg(d->handle, 0x40, COMM_CMD, COM_SEARCH_ACCESS | params, index, NULL, 0, USB_TIMEOUT);
+	return usb_control_msg(d->handle, USB_DEVICE_TO_HOST, COMM_CMD, COM_SEARCH_ACCESS | params, index, NULL, 0, USB_TIMEOUT);
 }
 
 /*
  * Initialize DS2490 device
  * 
- * i -- DS2490 count
- * dev -- USB device
+ * @param i DS2490 count
+ * @param dev USB device
  * 
  * Returns: 0 on success, < 0 on failure
  */
@@ -621,15 +668,24 @@ owusb_init_dev(int i, struct usb_device *dev)
 	if (h <= 0) {
 		return -1;
 	}
-
+	
+	/* Configuration 0: not configured; 1: configured */
 	if (usb_set_configuration(h, 1) < 0) {
 		return -2;
 	}
 
+	/* Interface 0 is the only valid interface value for the DS2490 */
 	if (usb_claim_interface(h, 0) < 0) {
 		return -3;
 	}
 
+	/* Alternate settings:
+	 *    EP poll   EP2/3 packet size
+	 * 0: 10ms      16 bytes
+	 * 1: 10ms      64 bytes
+	 * 2: 1ms       16 bytes
+	 * 3: 1ms       64 bytes
+	 */
 	if (usb_set_altinterface(h, USB_ALT_INTERFACE) < 0) {
 		return -4;
 	}
@@ -696,8 +752,10 @@ owusb_fini(void)
 void
 owusb_interrupt_read(owusb_device_t *dev)
 {
-	dev->interrupt_len = usb_interrupt_read(dev->handle, 1, 
-						(char *)dev->interrupt_data, INTERRUPT_DATA_LEN, 
+	dev->interrupt_len = usb_interrupt_read(dev->handle,
+						USB_ENDPOINT_TYPE_ISOCHRONOUS, 
+						(char *)dev->interrupt_data,
+						INTERRUPT_DATA_LEN, 
 						dev->timeout);
 	dev->interrupt_count++;
 }
@@ -706,13 +764,15 @@ owusb_interrupt_read(owusb_device_t *dev)
 int
 owusb_write(owusb_device_t *dev, const uint8_t *data, int len)
 {
-	return usb_bulk_write(dev->handle, 2, (char *)data, len, dev->timeout);
+	return usb_bulk_write(dev->handle, USB_ENDPOINT_TYPE_BULK,
+			(char *)data, len, dev->timeout);
 }
 
 int
 owusb_read(owusb_device_t *dev, uint8_t *data, int len)
 {
-	return usb_bulk_read(dev->handle, 3, (char *)data, len, dev->timeout);
+	return usb_bulk_read(dev->handle, USB_ENDPOINT_TYPE_INTERRUPT,
+			(char *)data, len, dev->timeout);
 }
 
 /* Wait for a command to complete */
@@ -842,6 +902,7 @@ owusb_search_all(owusb_device_t *dev, uint8_t *data, int len)
 	return owusb_search(dev, 0xf0, data, len);
 }
 
+#if 0
 static int
 highest_bit(uint8_t b) 
 {
@@ -851,6 +912,7 @@ highest_bit(uint8_t b)
 	}
 	return r;
 }
+#endif
 
 uint8_t
 compare(uint8_t disc, uint8_t addr)
@@ -959,18 +1021,28 @@ owusb_reset(owusb_device_t *dev)
 	return owusb_result(dev);
 }
 
+
+/*
+ * Send a command to a device
+ * 
+ * @param addr Address of device
+ * @param cmd 1-wire command to send to device
+ * @param out Output buffer
+ * @param outlen Length of output buffer
+ */
 int
-owusb_cmd(owusb_device_t *dev, uint8_t* addr, uint8_t cmd, uint8_t *out, int outlen)
+owusb_cmd(owusb_device_t *dev, const uint8_t* addr, uint8_t cmd, uint8_t *out, int outlen)
 {
 	uint8_t cmdbuf[10];
 	
-	cmdbuf[0] = 0x55; /* Match ROM */
+	cmdbuf[0] = WIRE_CMD_MATCH_ROM;
 	memcpy(&cmdbuf[1], addr, 8);
 	cmdbuf[9] = cmd;
 	owusb_write(dev, cmdbuf, 10);
 	owusb_com_read_straight(dev, PARAM_RST | PARAM_IM, 10, outlen);
 	return owusb_read(dev, out, outlen);
 }
+
 
 int
 owusb_block_io(owusb_device_t *dev, 
@@ -987,29 +1059,29 @@ owusb_block_io(owusb_device_t *dev,
 	
 	if (reset) { 
 		flags |= PARAM_RST;
-		sleeplen = 1096;
+		sleeplen = REGULAR_RESET_US;
 	}
 	if (spu) flags |= PARAM_SPU;
 	
-	if (writedatalen) { 
+	if (writedatalen > 0) { 
 		owusb_write(dev, writedata, writedatalen);
 	}
-	if (readdatalen) {
+	if (readdatalen > 0) {
 		memset(readdata, 0xff, readdatalen);
 		owusb_write(dev, readdata, readdatalen);
 	}
-
+	
 	owusb_com_block_io(dev, flags, datalen);
 	sleeplen += datalen * 8 * FLEXIBLE_SLOT_US;
 	usleep(sleeplen);
 	owusb_read(dev, tmpbuf, DS2490_FIFOSIZE);
-	if (writedatalen) {
+	if (writedatalen > 0) {
 		/* Verify that the same bits we wrote were seen on the wire */
 		if (memcmp(tmpbuf, writedata, writedatalen) != 0) {
 			return -1;
 		}
 	}
-	if (readdatalen) {
+	if (readdatalen > 0) {
 		memcpy(readdata, &tmpbuf[writedatalen], readdatalen);
 	}
 	return 0;
