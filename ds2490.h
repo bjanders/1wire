@@ -13,59 +13,96 @@
  *   00: not used; 01: byte 1 used; 10: bytes 1 and 2 used)
  */
 
+enum {
 /* 1-wire reset */
-#define PARAM_PST	0x4000 /* Reset until presence */
+	PARAM_PST =	0x4000, /* Reset until presence */
 /* search access */
-#define PARAM_RTS	0x4000 /* Return discrepancy info */
-#define PARAM_SM  	0x0008 /* Search for ROMs, no access */
+	PARAM_RTS =	0x4000, /* Return discrepancy info */
+	PARAM_SM  =	0x0008, /* Search for ROMs, no access */
 /* bit I/O */
-#define PARAM_CIB       0x4000 /* Prevent strong pullup if SPU and readback is 1 */
-#define PARAM_D         0x0008 /* Bit to write */
+	PARAM_CIB =     0x4000, /* Prevent strong pullup if SPU and readback is 1 */
+	PARAM_D =       0x0008, /* Bit to write */
 /* set duration, pulse */
-#define PARAM_TYPE	0x0008 /* 1: Programming pulse, 0: strong pullup */ 
+	PARAM_TYPE =	0x0008, /* 1: Programming pulse, 0: strong pullup */ 
 /* match access */
-#define PARAM_SE	0x0008 /* Enable speed change */
+	PARAM_SE =	0x0008, /* Enable speed change */
 /* read redirect page */
-#define PARAM_CH        0x0008 /* Follows the chain if the page is redirected */
+	PARAM_CH =      0x0008, /* Follows the chain if the page is redirected */
 /* write SRAM page, write EPROM, read CRC prot page */
-#define PARAM_DT        0x2000 /* Activate CRC generator */
-#define PARAM_PS        0x4000 /* Reduce preamble from 3 to 2 bytes */
+	PARAM_DT =      0x2000, /* Activate CRC generator */
+	PARAM_PS =      0x4000, /* Reduce preamble from 3 to 2 bytes */
 /* write EPROM */
-#define PARAM_Z         0x0008 /* Check zero bit writes only */
+	PARAM_Z =       0x0008, /* Check zero bit writes only */
 /* do & release */
-#define PARAM_R         0x0008 /* Perform write (0) or read (1) function */
+	PARAM_R =       0x0008, /* Perform write (0) or read (1) function */
 
 
-#define PARAM_SPU       0x1000 /* Strong pullup after command */
-#define PARAM_F		0x0800 /* Clear buffer on error */
-#define PARAM_NTF	0x0400 /* Result feedback */
-#define PARAM_ICP	0x0200 /* Not last one of macro */
-#define PARAM_RST	0x0100 /* Reset before executing command */
-#define PARAM_IM 	0x0001 /* Immediate execution */
-
+	PARAM_SPU =     0x1000, /* Strong pullup after command */
+	PARAM_F =	0x0800, /* Clear buffer on error */
+	PARAM_NTF =	0x0400, /* Result feedback */
+	PARAM_ICP =	0x0200, /* Not last one of macro */
+	PARAM_RST =	0x0100, /* Reset before executing command */
+	PARAM_IM = 	0x0001 /* Immediate execution */
+};
 
 #define INTERRUPT_DATA_LEN 32
 
+enum {
+	RESULT_DETECT = 0xa5, /* 1-Wire Device detected */ 
+	RESULT_XDETECT = 0x0100,
+	RESULT_EOS = 0x80, /* Search access ended sooner than expected */
+	RESULT_RDP = 0x40, /* Page redirect */
+	RESULT_CRC = 0x20, /* CRC error */
+	RESULT_CMP = 0x10, /* Compare failed */
+	RESULT_VPP = 0x08, /* 12V not seen */
+	RESULT_APP = 0x04, /* Alarming presence pulse */
+	RESULT_SH  = 0x02, /* Short cut */
+	RESULT_NRS = 0x01 /* No response */
+};
 
-#define RESULT_DETECT 0xa5 /* 1-Wire Device detected */ 
-#define RESULT_XDETECT 0x0100
-#define RESULT_EOS 0x80 /* Search access ended sooner than expected */
-#define RESULT_RDP 0x40 /* Page redirect */
-#define RESULT_CRC 0x20 /* CRC error */
-#define RESULT_CMP 0x10 /* Compare failed */
-#define RESULT_VPP 0x08 /* 12V not seen */
-#define RESULT_APP 0x04 /* Alarming presence pulse */
-#define RESULT_SH  0x02 /* Short cut */
-#define RESULT_NRS 0x01 /* No response */
+enum {
+	STATE_EP0F = 0x80,
+	STATE_IDLE = 0x20,
+	STATE_HALT = 0x10,
+	STATE_PMOD = 0x08,
+	STATE_12VP = 0x04,
+	STATE_PRGA = 0x02,
+	STATE_SPUA = 0x01
+};
 
-#define STATE_EP0F 0x80
-#define STATE_IDLE 0x20
-#define STATE_HALT 0x10
-#define STATE_PMOD 0x08
-#define STATE_12VP 0x04
-#define STATE_PRGA 0x02
-#define STATE_SPUA 0x01
+enum {
+	PARAM_SPEED_REGULAR = 0,
+	PARAM_SPEED_FLEXIBLE = 1,
+	PARAM_SPEED_OVERDIRVE = 2
+};
 
+enum {
+	PARAM_SLEWRATE_15Vus = 0,
+	PARAM_SLEWRATE_2_20Vus = 1,
+	PARAM_SLEWRATE_1_65Vus = 2,
+	PARAM_SLEWRATE_1_37Vus = 3,
+	PARAM_SLEWRATE_1_10Vus = 4,
+	PARAM_SLEWRATE_0_83Vus = 5,
+	PARAM_SLEWRATE_0_70Vus = 6,
+	PARAM_SLEWRATE_0_55Vus = 7
+};
+
+enum {
+	STATE_ENABLE_FLAGS = 0x00,
+	STATE_1WIRE_SPEED = 0x01,
+	STATE_SPU_DURATION = 0x02,
+	STATE_PROG_PULSE_DURATION = 0x03,
+	STATE_PULLDOWN_SLEW_RATE_CTRL = 0x04,
+	STATE_WRITE1_LOW_TIME = 0x05,
+	STATE_DSO = 0x06,
+	STATE_STATUS_FLAGS = 0x08,
+	STATE_COMBYTE1 = 0x09,
+	STATE_COMBYTE2 = 0x0a,
+	STATE_COMBUFFER_STATUS = 0x0b,
+	STATE_DATA_OUT_BUFFER_STATUS = 0x0c,
+	STATE_DATA_IN_BUFFER_STATUS = 0x0d
+};
+	
 
 typedef struct owusb_device {
 	struct usb_device *device;

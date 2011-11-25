@@ -30,6 +30,21 @@
 #define OVERDRIVE_BPS  1000000 / 10
 #define FLEXIBLE_BPS   1000000 / 79
 
+/*
+ * Three different vendor-specific command types exist to control and
+ * communicate with the DS2490: Control, Communication, and Mode.
+ *
+ * Control, Communication and Mode commands, like USB core requests,
+ * are communicated over the default control pipe at EP0.
+ */
+
+
+/*
+ * Control commands are used to manage various device functions
+ * including the processing of communication commands, buffer
+ * clearing, and SW reset.
+ */
+
 #define CTL_RESET_DEVICE	0x0000
 #define CTL_START_EXE		0x0001
 #define CTL_RESUME_EXE		0x0002
@@ -40,6 +55,12 @@
 #define CTL_FLUSH_XMT_BUFFER	0x0009
 #define CTL_GET_COMM_CMDS	0x000A
 
+/* 
+ * Mode commands are used to establish the 1-Wire operational
+ * characteristics of the DS2490 such as slew rate, low time, strong
+ * pullup, etc.
+ */
+
 #define MOD_PULSE_EN		0x0000
 #define MOD_SPEED_CHANGE_EN	0x0001
 #define MOD_1WIRE_SPEED		0x0002
@@ -48,6 +69,10 @@
 #define MOD_PROG_PULSE_DURATION	0x0005
 #define MOD_WRITE1_LOWTIME	0x0006
 #define MOD_DSOW0_TREC		0x0007
+
+/*
+ * Communication commands are used for 1-Wire data and command I/O.
+ */
 
 #define COM_SET_DURATION        0x12
 #define COM_BIT_IO              0x20
@@ -68,11 +93,6 @@
 
 #define PARAM_PRGE 0x01
 #define PARAM_SPUE 0x02
-
-#define PARAM_1WIRE_SPEED_REGULAR   0x0
-#define PARAM_1WIRE_SPEED_FLEXIBLE  0x1
-#define PARAM_1WIRE_SPEED_OVERDIRVE 0x2
-
 
 
 owusb_device_t owusb_devs[MAX_USBDEVS];
@@ -96,15 +116,35 @@ const char *ow_slew_rate[] = {
 	"0.55V/us"
 };
 
-/*
+/**************************************************************
  * Control commands
- */
+ *
+ * Control commands are used to manage various device functions
+ * including the processing of communication commands, buffer
+ * clearing, and SW reset.
+ **************************************************************/
 
+
+/* owusb_ctrl_reset
+ * 
+ * Performs a hardware reset equivalent to the power-on reset. This
+ * includes clearing all endpoint buffers and loading the Mode control
+ * registers with their default values.
+ */
+ 
 int
 owusb_ctl_reset(owusb_device_t *d)
 {
 	return usb_control_msg(d->handle, 0x40, CONTROL_CMD, CTL_RESET_DEVICE, 0x0000, NULL, 0, USB_TIMEOUT);
 }
+
+
+/* owusb_ctl_start_ext
+ * 
+ * Starts execution of Communication commands. This command is also
+ * required to start the execution of Communication commands with an
+ * IM (immediate execution control) bit set to logic 0.
+ */ 
 
 int
 owusb_ctl_start_exe(owusb_device_t *d)
@@ -112,11 +152,30 @@ owusb_ctl_start_exe(owusb_device_t *d)
 	return usb_control_msg(d->handle, 0x40, CONTROL_CMD, CTL_START_EXE, 0x0000, NULL, 0, USB_TIMEOUT);
 }
 
+
+/* owusb_ctl_resume_exe
+ * 
+ * Resume execution of a Communication command that was halted with
+ * either of the owusb_ctl_halt_exe_idle() or
+ * owusb_ctl_halt_exe_done() functions.
+ */
+ 
 int
 owusb_ctl_resume_exe(owusb_device_t *d)
 {
 	return usb_control_msg(d->handle, 0x40, CONTROL_CMD, CTL_RESUME_EXE, 0x0000, NULL, 0, USB_TIMEOUT);
 }
+
+
+/* owusb_ctl_halt_exe_idle
+ *
+ * Halt the execution of the current Communication command after the
+ * 1-Wire bus has returned to the idle state. Further Communication
+ * command processing is stopped until owusb_ctl_resume_exe() is
+ * called. This function, or the owusb_ctl_halt_exe_done() function,
+ * is also used to terminate a strong pullup or programming pulse of
+ * semi-infinite or infinite duration.
+ */
 
 int
 owusb_ctl_halt_exe_idle(owusb_device_t *d)
@@ -124,13 +183,31 @@ owusb_ctl_halt_exe_idle(owusb_device_t *d)
 	return usb_control_msg(d->handle, 0x40, CONTROL_CMD, CTL_HALT_EXE_IDLE, 0x0000, NULL, 0, USB_TIMEOUT);
 }
 
+
+/* owusb_ctl_halt_exe_done
+ * 
+ * Halt the execution of a Communication command after the current
+ * command execution is complete. Further Communication command
+ * processing is stopped until owusb_ctl_resume_exe() is called.  This
+ * function, or the owusb_ctl_halt_exe_idle(), is also used to
+ * terminate a strong pullup or programming pulse of semi-infinite or
+ * infinite duration.
+ */
+
 int
 owusb_ctl_halt_exe_done(owusb_device_t *d)
 {
 	return usb_control_msg(d->handle, 0x40, CONTROL_CMD, CTL_HALT_EXE_DONE, 0x0000, NULL, 0, USB_TIMEOUT);
 }
 
-/* The DS2490 must be in a halted state before this command can be processed */
+
+/* owusb_ctl_flush_comm_cmds
+ *
+ * Clear all unexecuted Communication commands from the command
+ * FIFO. The DS2490 must be in a halted state before this function can
+ * be called.
+ */
+
 /* FIX: add check that it is in halted state? */
 int
 owusb_ctl_flush_comm_cmds(owusb_device_t *d)
@@ -138,35 +215,75 @@ owusb_ctl_flush_comm_cmds(owusb_device_t *d)
 	return usb_control_msg(d->handle, 0x40, CONTROL_CMD, CTL_FLUSH_COMM_CMDS, 0x0000, NULL, 0, USB_TIMEOUT);
 }
 
-/* The DS2490 must be in a halted state before this command can be processed */
+
+/* owusb_ctl_fush_rcv_buffer
+ *
+ * Clear EP3 receive data FIFO (data from 1-Wire device). The DS2490
+ * must be in a halted state before this function can be called.
+ */
+
 int
 owusb_ctl_flush_rcv_buffer(owusb_device_t *d)
 {
 	return usb_control_msg(d->handle, 0x40, CONTROL_CMD, CTL_FLUSH_RCV_BUFFER, 0x0000, NULL, 0, USB_TIMEOUT);
 }
 
-/* The DS2490 must be in a halted state before this command can be processed */
+
+/* owusb_ctl_flush_xmt_buffer
+ *
+ * Clear EP2 transmit data FIFO (data to 1-Wire device). The DS2490
+ * must be in a halted state before this function can be called.
+ */
+
 int
 owusb_ctl_flush_xmt_buffer(owusb_device_t *d)
 {
 	return usb_control_msg(d->handle, 0x40, CONTROL_CMD, CTL_FLUSH_XMT_BUFFER, 0x0000, NULL, 0, USB_TIMEOUT);
 }
 
-/* The DS2490 must be in a halted state before this command can be processed */
+/* owusb_ctl_get_comm_cmds
+ *
+ * Retrieve unexecuted Communication commands and parameters from the
+ * command FIFO. The DS2490 must be in a halted state before this
+ * function can be called.  Unexecuted commands are returned over EP0
+ * in the control transfer data phase. Host software is responsible
+ * for determining the number of command/parameter bytes to be
+ * returned and specifying the value in the wLength field of the
+ * control transfer setup packet.  Commands/parameters are deleted
+ * from the FIFO as they are transmitted to the host; the command
+ * pointer used with the FIFO is updated as values are read. Any
+ * commands/parameters that are not transferred remain in the FIFO and
+ * will be processed when command execution resumes. If the wLength
+ * value passed is larger than the number of command/parameter bytes,
+ * the DS2490 will terminate the control transfer with a short data
+ * packet.
+ */
+
 int
 owusb_ctl_get_comm_cmds(owusb_device_t *d, uint8_t *cmds, int len)
 {
 	return usb_control_msg(d->handle, 0x40, CONTROL_CMD, CTL_RESUME_EXE, 0x0000, (char *)cmds, len, USB_TIMEOUT);
 }
 
-/*
+/**************************************************************
  * Mode commands
- */
+ * 
+ * Mode commands are used to establish the 1-Wire operational
+ * characteristics of the DS2490 such as slew rate, low time, strong
+ * pullup, etc.
+ **************************************************************/
+ 
 
-
-/*
- * params:
- * - PARAM_SPUE - Strong pullup enabled
+/* owusb_mod_pulse_en
+ * 
+ * Enable a 1-Wire strong pullup pulse to 5V and/or +12V EPROM
+ * programming pulse.
+ *
+ * The power-up default state for both strong pullup and
+ * programming pulse is disabled.
+ *
+ * @param params
+ * - PARAM_SPUE - Strong pullup enabled 
  * - PARAM_PRGE - Programming pulse enabled
  */
 
@@ -177,17 +294,53 @@ owusb_mod_pulse_en(owusb_device_t *d, int params)
 }
 
 
+/* owusb_mod_speed_change_en
+ *
+ * Enable or disable a 1-Wire communication speed change. 
+ * 
+ * The power-up default state for speed change is disabled.
+ *
+ * @param enable 
+ * - 0: disable
+ * - 1: enable
+ */
+
 int
 owusb_mod_speed_change_en(owusb_device_t *d, int enable)
 {
 	return usb_control_msg(d->handle, 0x40, MODE_CMD, MOD_SPEED_CHANGE_EN, enable & 0x1, NULL, 0, USB_TIMEOUT);
 }
 
+/* owusb_mod_speed
+ *
+ * Set the speed of 1-Wire communication
+ *
+ * The power-up default communication speed is regular.
+ *
+ * @param speed PARAM_SPEED_REGULAR, PARAM_SPEED_FLEXIBLE or
+ * PARAM_SPEED_OVERDIRVE
+ */
 int
 owusb_mod_speed(owusb_device_t *d, int speed)
 {
 	return usb_control_msg(d->handle, 0x40, MODE_CMD, MOD_1WIRE_SPEED, speed & 0x3, NULL, 0, USB_TIMEOUT);
 }
+
+/* owusb_mod_strong_pu_duration
+ *
+ * Set the time duration of a 1-Wire strong pullup. The time is
+ * controlled with an unsigned 8-bit binary number between 0x00 and
+ * 0xfe which specifies the duration in multiples of 16ms. A value of
+ * 0x01 specifies 16ms, 0x02 equals 32ms, etc. A value of 0x00
+ * specifies infinite duration. Parameter value 0xff is reserved and
+ * will cause the device to deliver a pullup duration of <1µs. To
+ * terminate an infinite duration pullup call either
+ * owusb_ctl_halt_exe_done() or owusb_halt_exe_idle().
+ * 
+ * The power-up default strong pullup duration register value is
+ * 512ms.
+ *
+ */
 
 int
 owusb_mod_strong_pu_duration(owusb_device_t *d, int duration)
@@ -195,11 +348,34 @@ owusb_mod_strong_pu_duration(owusb_device_t *d, int duration)
 	return usb_control_msg(d->handle, 0x40, MODE_CMD, MOD_STRONG_PU_DURATION, duration & 0xff, NULL, 0, USB_TIMEOUT);
 }
 
+/*
+ * Select the pulldown slew rate for 1-Wire bus Flexible Speed
+ * operation. The pulldown slew rate power-up default value for
+ * Flexible speed is 0.83V/us.
+ *
+ * @param slewrate PARAM_SLEWRATE_15Vus, PARAM_SLEWRATE_2_20Vus,
+ * PARAM_SLEWRATE_1_65Vus, PARAM_SLEWRATE_1_37Vus,
+ * PARAM_SLEWRATE_1_10Vus, PARAM_SLEWRATE_0_83Vus,
+ * PARAM_SLEWRATE_0_70Vus, PARAM_SLEWRATE_0_55Vus
+ *
+ */
+
 int
 owusb_mod_pulldown_slewrate(owusb_device_t *d, int slewrate)
 {
 	return usb_control_msg(d->handle, 0x40, MODE_CMD, MOD_PULLDOWN_SLEWRATE, slewrate & 0xf, NULL, 0, USB_TIMEOUT);
 }
+
+/*
+ * Set the time duration of a 1-Wire Programming Pulse. The time is
+ * controlled with a an unsigned 8-bit binary number between 0x00 and
+ * 0xfe specifying the duration in multiples of 8µs. A value of 0x00
+ * stands for infinite duration. Parameter value 0xff is reserved and
+ * will cause the device to deliver a pulse duration of <1µs. To
+ * terminate an infinite duration programming pulse call either
+ * owusb_ctl_halt_exe_done() or owusb_halt_exe_idle(). The power-up
+ * default strong pullup duration is 512µs.
+ */
 
 int
 owusb_mod_prog_pulse_duration(owusb_device_t *d, int duration)
@@ -207,12 +383,22 @@ owusb_mod_prog_pulse_duration(owusb_device_t *d, int duration)
 	return usb_control_msg(d->handle, 0x40, MODE_CMD, MOD_PROG_PULSE_DURATION, duration & 0xff, NULL, 0, USB_TIMEOUT);
 }
 
+/*
+ * Select the Write-1 low time for 1-Wire bus Flexible speed
+ * operation; The nominal Write-1 Low Time for Regular speed is 8us,
+ * at Overdrive speed it is 1us. The Write-1 Low Time power-up
+ * default value for Flexible speed is 12us.
+ */
 int
 owusb_mod_write1_lowtime(owusb_device_t *d, int duration)
 {
 	return usb_control_msg(d->handle, 0x40, MODE_CMD, MOD_WRITE1_LOWTIME, duration & 0xf, NULL, 0, USB_TIMEOUT);	
 }
 
+/*
+ * Select the Data Sample Offset (tDSO) / Write-0 recovery (tW0R) time
+ * (DSO/W0R) for 1-Wire bus Flexible Speed operation.
+ */
 int
 owusb_mod_dsow0_trec(owusb_device_t *d, int duration)
 {
@@ -220,13 +406,18 @@ owusb_mod_dsow0_trec(owusb_device_t *d, int duration)
 }
 
 
-/*
+/*******************************************************************
  * Communication commands
- */
+ *
+ * Communication commands are used for 1-Wire data and command I/O.
+ *******************************************************************/
 
 /*
- * params: NTF, ICP, IM (TYPE)
- * type: 1: programming pulse; 0: strong pullup
+ * Change the State Register pulse duration value for either the +12V
+ * programming pulse or strong pullup.
+ *
+ * @param params NTF, ICP, IM (TYPE)
+ * @param type 1: programming pulse; 0: strong pullup
  */
 
 int
@@ -239,8 +430,13 @@ owusb_com_set_duration(owusb_device_t *d, int params, int type, int duration)
 }
 
 /*
- * params: F, NTF, ICP, TYPE, IM (TYPE)
- * type: 1: programming pulse; 0: strong pullup
+ * Temporarily pull the 1-Wire bus to +12V in order to program an
+ * EPROM device or to generate a strong pullup to 5V in order to
+ * provide extra power for an attached iButton device, e.g.,
+ * temperature sensor or crypto iButton.
+ *
+ * @param params F, NTF, ICP, TYPE, IM (TYPE)
+ * @param type 1: programming pulse; 0: strong pullup
  */
 
 int
@@ -252,9 +448,14 @@ owusb_com_pulse(owusb_device_t *d, int params, int type)
 }
 
 /*
- * params: PST, F, NTF, ICP, IM
- * present: Reset until present
- * speed:
+ * Generate a reset pulse on the 1-Wire bus and to optionally change
+ * the 1-Wire speed.
+ * 
+ * @param params PST, F, NTF, ICP, IM
+ * @param present Reset until present
+ * @param speed PARAM_SPEED_REGULAR, PARAM_SPEED_FLEXIBLE,
+ * PARAM_SPEED_OVERDIRVE
+ * 
  */
 
 int
@@ -402,6 +603,15 @@ owusb_com_search_access(owusb_device_t *d, int params, int discrepancy, int noac
 	return usb_control_msg(d->handle, 0x40, COMM_CMD, COM_SEARCH_ACCESS | params, index, NULL, 0, USB_TIMEOUT);
 }
 
+/*
+ * Initialize DS2490 device
+ * 
+ * i -- DS2490 count
+ * dev -- USB device
+ * 
+ * Returns: 0 on success, < 0 on failure
+ */
+
 static int
 owusb_init_dev(int i, struct usb_device *dev)
 {
@@ -439,6 +649,14 @@ owusb_init_dev(int i, struct usb_device *dev)
  * High level functions
  */
 
+
+/*
+ * Initalize the owusb library. This function must be called before any
+ * other function.
+ *
+ * Returns: 0 on success, < 0 on failure
+ */
+
 int
 owusb_init(void)
 {
@@ -463,6 +681,10 @@ owusb_init(void)
 	}
 	return 0;
 }
+
+/*
+ * Finalize the owusb library.
+ */
 
 void
 owusb_fini(void)
@@ -516,13 +738,13 @@ owusb_wait_for_presence(owusb_device_t *dev)
 int
 owusb_datain(owusb_device_t *dev)
 {
-	return dev->interrupt_data[13];
+	return dev->interrupt_data[STATE_DATA_IN_BUFFER_STATUS];
 }
 
 int
 owusb_isidle(owusb_device_t *dev)
 {
-	return dev->interrupt_data[8] & 0x20;
+	return dev->interrupt_data[STATE_STATUS_FLAGS] & 0x20;
 }
 
 uint16_t
@@ -532,7 +754,7 @@ owusb_result(owusb_device_t *dev)
 	uint16_t result = 0;
 
 	for (i = 16; i < dev->interrupt_len; i++) {
-		if (dev->interrupt_data[0x10] == RESULT_DETECT) {
+		if (dev->interrupt_data[STATE_COMBYTE2] == RESULT_DETECT) {
 			result |= RESULT_XDETECT;
 		} else {
 			result |= dev->interrupt_data[i];
@@ -557,19 +779,19 @@ owusb_print_state(owusb_device_t *dev)
 	uint8_t *data = dev->interrupt_data;
 
 	printf("============================\n");
-	printf("Enable Flags: %02x\n", data[0]);
-	printf("1-Wire speed: %s\n", ow_speed[data[1]]);
-	printf("Strong Pullup Duration: %dms\n", data[2] * 16);
-	printf("Programming Pulse: %dus\n", data[3] * 8);
-	printf("Pulldown Slew Rate: %s\n", ow_slew_rate[data[4]]);
-	printf("Write-1 Low Time: %dus\n", data[5] + 8);
-	printf("Data Sample Offset: %dus\n", data[6] + 3);
+	printf("Enable Flags: %02x\n", data[STATE_ENABLE_FLAGS]);
+	printf("1-Wire speed: %s\n", ow_speed[data[STATE_1WIRE_SPEED]]);
+	printf("Strong Pullup Duration: %dms\n", data[STATE_SPU_DURATION] * 16);
+	printf("Programming Pulse: %dus\n", data[STATE_PROG_PULSE_DURATION] * 8);
+	printf("Pulldown Slew Rate: %s\n", ow_slew_rate[data[STATE_PULLDOWN_SLEW_RATE_CTRL]]);
+	printf("Write-1 Low Time: %dus\n", data[STATE_WRITE1_LOW_TIME] + 8);
+	printf("Data Sample Offset: %dus\n", data[STATE_DSO] + 3);
 	/* byte 7 reserved */
-	printf("Status: %02x\n", data[8]);
-	printf("Com command: %02x%02x\n", data[10], data[9]);
-	printf("Comstat: %d bytes\n", data[11]);
-	printf("Dataout: %d bytes\n", data[12]);
-	printf("Datain: %d bytes\n", data[13]);
+	printf("Status: %02x\n", data[STATE_STATUS_FLAGS]);
+	printf("Com command: %02x%02x\n", data[STATE_COMBYTE2], data[STATE_COMBYTE1]);
+	printf("Comstat: %d bytes\n", data[STATE_COMBUFFER_STATUS]);
+	printf("Dataout: %d bytes\n", data[STATE_DATA_OUT_BUFFER_STATUS]);
+	printf("Datain: %d bytes\n", data[STATE_DATA_IN_BUFFER_STATUS]);
 	/* bytes 14 and 15 reserved */
 	owusb_print_result(dev);
 	printf("============================\n");
@@ -588,11 +810,18 @@ int
 owusb_search(owusb_device_t *dev, uint8_t type, uint8_t *data, int len)
 {
 	uint8_t zeros[8];
+	int r;
 
 	memset(zeros, 0, 8);
-	owusb_write(dev, zeros, 8);
+	r = owusb_write(dev, zeros, 8);
+	if (r < 0) {
+	  return r;
+	}
 	/* no discrepancy, no access, no device limit */
-	owusb_com_search_access(dev, PARAM_F | PARAM_RST | PARAM_IM, 0, 1, 0, type);
+	r = owusb_com_search_access(dev, PARAM_F | PARAM_RST | PARAM_IM, 0, 1, 0, type);
+	if (r < 0) {
+	  return r;
+	}
 	/* Sleep for the reset and eventual first ROM to finish */
 	usleep(REGULAR_RESET_US);
 	/* 3 bits for each ROM bit */
@@ -601,6 +830,7 @@ owusb_search(owusb_device_t *dev, uint8_t type, uint8_t *data, int len)
 	while (!owusb_isidle(dev)) {
 		/* If are not idle, then there is probably more ROMs to read */
 		usleep(3 * 64 * FLEXIBLE_SLOT_US);
+	       
 		owusb_interrupt_read(dev);
 	}
 	return owusb_read(dev, data, len);
@@ -639,6 +869,8 @@ compare(uint8_t disc, uint8_t addr)
 	return 0;
 }
 
+/* Return 1 if more devices, 0 if none */
+
 int
 owusb_search_next(owusb_device_t *dev, uint8_t *data) 
 {
@@ -651,9 +883,16 @@ owusb_search_next(owusb_device_t *dev, uint8_t *data)
 	if (dev->search_stop) {
 		return 0;
 	}
-	owusb_write(dev, dev->discrepancy, 8);
+	r = owusb_write(dev, dev->discrepancy, 8);
+	if (r < 0) {
+	  return 0;
+	}
+	  
 	/* discrepancy, access, 1 device */
-	owusb_com_search_access(dev, PARAM_F | PARAM_RST | PARAM_IM, 1, 1, 1, dev->search_cmd);
+	r = owusb_com_search_access(dev, PARAM_F | PARAM_RST | PARAM_IM, 1, 1, 1, dev->search_cmd);
+	if (r < 0) {
+	  return 0;
+	}
 	usleep(REGULAR_RESET_US + 3 * 64 * FLEXIBLE_SLOT_US + 100);
 	/*owusb_interrupt_read(dev);*/
 	r = owusb_read(dev, disc, 16);
@@ -673,10 +912,11 @@ owusb_search_next(owusb_device_t *dev, uint8_t *data)
 					continue;
 				}
 			}
-			if (set)
+			if (set) {
 				dev->discrepancy[i] = disc[i] & disc[i + 8];
-			else 
+			} else  {
 				dev->discrepancy[i] = 0;
+			}
 		}
 	} else {
 		dev->search_stop = 1;
