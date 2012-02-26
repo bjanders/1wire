@@ -20,6 +20,9 @@ COPY_SCRATCHPAD = '\x48'
 RECALL_EEPROM = '\xb8'
 READ_POWER_SUPPLY = '\xb4'
 
+READ_MEMORY = '\xf0'
+READ_MEMORY_AND_COUNTER = '\xa5'
+
 # Mapping from familiy code to OwDevice subclass
 family = {}
 
@@ -155,7 +158,18 @@ class OwThermometer(OwDevice):
 		self.cmd(RECALL_EEPROM)
 
 	def read_power_supply(self):
-		self.cmd(READ_POWER_SUPPLY)
+		return self.cmd(READ_POWER_SUPPLY)
+
+class OwCounter(OwDevice):
+	family = 0x1d
+
+	def read_memory(self, address, len):
+		cmd = READ_MEMORY + struct.pack("<H", address)
+		return self.cmd(cmd, len)
+	
+	def read_memory_and_counter(self, address=0x01c0, len=42):
+		cmd = READ_MEMORY_AND_COUNTER + struct.pack("<H", address)
+		return self.cmd(cmd, len)
 
 class OwAddressableSwitch(OwDevice):
 	family = 0x05
@@ -181,6 +195,8 @@ class OwAddressableSwitch(OwDevice):
 		if self._on:
 			self.toggle()
 		
+
+
 
 for t in globals().values():
 	if type(t) is types.TypeType and issubclass(t, OwDevice):
