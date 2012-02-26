@@ -1,7 +1,7 @@
-C and Python 1-wire interface
+C and Python API to Maxim 1-Wire devices
 
 Note that the C library competes with the Linux wire.ko kernel 
-module. This library will not function if wire.ko is inserted.
+module. This library will not function if wire.ko is loaded.
 
 On Ubuntu requires at least the following packages to build:
 - libusb-dev
